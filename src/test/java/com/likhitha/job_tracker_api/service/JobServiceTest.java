@@ -23,6 +23,20 @@ import com.likhitha.job_tracker_api.exception.JobNotFoundException;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.likhitha.job_tracker_api.dto.JobRequest;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+
 public class JobServiceTest {
 
         @Mock
@@ -170,6 +184,132 @@ public class JobServiceTest {
                 org.mockito.Mockito.verify(
                                 jobRepository,
                                 org.mockito.Mockito.never()).deleteById(99L);
+        }
+
+        @Test
+        void searchJobsWithoutFiltersReturnsAllJobs() {
+
+                Job job = new Job();
+                job.setId(1L);
+                job.setCompany("Google");
+                job.setPosition("Software Engineer");
+                job.setLocation("California");
+                job.setStatus(JobStatus.APPLIED);
+
+                Pageable pageable = PageRequest.of(0, 5);
+
+                Page<Job> jobPage = new PageImpl<>(List.of(job));
+
+                when(jobRepository.findAll(
+                                any(Specification.class),
+                                eq(pageable)))
+                                .thenReturn(jobPage);
+
+                Page<JobResponse> result = jobService.searchJobs(null, null, null, pageable);
+
+                assertEquals(1, result.getTotalElements());
+                assertEquals("Google", result.getContent().get(0).getCompany());
+        }
+
+        @Test
+        void searchJobsWithStatusReturnsMatchingJobs() {
+
+                Job job = new Job();
+                job.setId(2L);
+                job.setCompany("Amazon");
+                job.setStatus(JobStatus.INTERVIEW);
+
+                Pageable pageable = PageRequest.of(0, 5);
+
+                Page<Job> jobPage = new PageImpl<>(List.of(job));
+
+                when(jobRepository.findAll(
+                                any(Specification.class),
+                                eq(pageable)))
+                                .thenReturn(jobPage);
+
+                Page<JobResponse> result = jobService.searchJobs(
+                                JobStatus.INTERVIEW, null, null, pageable);
+
+                assertEquals(1, result.getTotalElements());
+                assertEquals(JobStatus.INTERVIEW,
+                                result.getContent().get(0).getStatus());
+        }
+
+        @Test
+        void searchJobsWithCompanyFilterReturnsMatchingJobs() {
+
+                Job job = new Job();
+                job.setId(3L);
+                job.setCompany("Google");
+                job.setStatus(JobStatus.APPLIED);
+
+                Pageable pageable = PageRequest.of(0, 5);
+
+                Page<Job> jobPage = new PageImpl<>(List.of(job));
+
+                when(jobRepository.findAll(
+                                any(Specification.class),
+                                eq(pageable)))
+                                .thenReturn(jobPage);
+
+                Page<JobResponse> result = jobService.searchJobs(null, "goo", null, pageable);
+
+                assertEquals(1, result.getTotalElements());
+                assertEquals("Google", result.getContent().get(0).getCompany());
+        }
+
+        @Test
+        void searchJobsWithLocationFilterReturnsMatchingJobs() {
+
+                Job job = new Job();
+                job.setId(4L);
+                job.setCompany("Microsoft");
+                job.setLocation("Redmond");
+                job.setStatus(JobStatus.APPLIED);
+
+                Pageable pageable = PageRequest.of(0, 5);
+
+                Page<Job> jobPage = new PageImpl<>(List.of(job));
+
+                when(jobRepository.findAll(
+                                any(Specification.class),
+                                eq(pageable)))
+                                .thenReturn(jobPage);
+
+                Page<JobResponse> result = jobService.searchJobs(null, null, "red", pageable);
+
+                assertEquals(1, result.getTotalElements());
+                assertEquals("Redmond", result.getContent().get(0).getLocation());
+        }
+
+        @Test
+        void searchJobsWithMultipleFiltersReturnsMatchingJobs() {
+
+                Job job = new Job();
+                job.setId(5L);
+                job.setCompany("Google");
+                job.setLocation("California");
+                job.setStatus(JobStatus.INTERVIEW);
+
+                Pageable pageable = PageRequest.of(0, 5);
+
+                Page<Job> jobPage = new PageImpl<>(List.of(job));
+
+                when(jobRepository.findAll(
+                                any(Specification.class),
+                                eq(pageable)))
+                                .thenReturn(jobPage);
+
+                Page<JobResponse> result = jobService.searchJobs(
+                                JobStatus.INTERVIEW,
+                                "goo",
+                                "cal",
+                                pageable);
+
+                assertEquals(1, result.getTotalElements());
+                assertEquals("Google", result.getContent().get(0).getCompany());
+                assertEquals("California", result.getContent().get(0).getLocation());
         }
 
 }
